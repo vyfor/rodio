@@ -30,7 +30,7 @@ impl OutputStream {
         device: &cpal::Device,
     ) -> Result<(Self, OutputStreamHandle), StreamError> {
         let default_config = device.default_output_config()?;
-        OutputStream::try_from_device_config(device, default_config)
+        OutputStream::try_from_device_config(device, &default_config.config(), &default_config.sample_format())
     }
 
     /// Returns a new stream & handle using the given device and stream config.
@@ -331,10 +331,10 @@ impl CpalDeviceExt for cpal::Device {
         config: &StreamConfig,
         sample_format: &SampleFormat,
     ) -> Result<(Arc<DynamicMixerController<f32>>, cpal::Stream), StreamError> {
-        self.new_output_stream_with_format(config).or_else(|err| {
+        self.new_output_stream_with_format(config, sample_format).or_else(|err| {
             // look through all supported formats to see if another works
             supported_output_formats(self)?
-                .find_map(|format| self.new_output_stream_with_format(format).ok())
+                .find_map(|format| self.new_output_stream_with_format(&format.config(), &format.sample_format()).ok())
                 // return original error if nothing works
                 .ok_or(StreamError::BuildStreamError(err))
         })
